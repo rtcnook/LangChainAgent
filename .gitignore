@@ -1,0 +1,15 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+.idea/
+.langgraph_api/
+app/db/personal_chief.db
+notebook/Ch2/resources/personal_chief.db*
+db/*.db*
+notebook/**/resources/*.db*
+node_modules/
+.next/
+out/
+build/
+dist/
