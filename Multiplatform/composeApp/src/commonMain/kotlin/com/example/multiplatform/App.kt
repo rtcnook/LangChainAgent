@@ -27,9 +27,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,6 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 
 object AppCopy {
     const val title = "AI 私人厨师"
@@ -95,7 +99,15 @@ fun App() {
 @Composable
 private fun AiChefScreen() {
     var draft by remember { mutableStateOf("") }
-    var messages by remember { mutableStateOf(sampleConversation()) }
+    val controller = remember { ChatController(HttpChatBackend()) }
+    val messages by controller.messagesFlow.collectAsState()
+    val processing by controller.processingFlow.collectAsState()
+    val errorMessage by controller.errorMessageFlow.collectAsState()
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(controller) {
+        controller.loadHistory()
+    }
 
     Box(
         modifier = Modifier
@@ -108,10 +120,11 @@ private fun AiChefScreen() {
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             HeaderBar(
-                onNewChat = { messages = emptyList() },
+                onNewChat = { scope.launch { controller.newChat() } },
             )
             ChatPanel(
                 messages = messages,
+                errorMessage = errorMessage,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth(),
@@ -121,10 +134,14 @@ private fun AiChefScreen() {
                 onValueChange = { draft = it },
                 onSend = {
                     if (draft.isNotBlank()) {
-                        messages = messages + ChatPreviewMessage(isUser = true, content = draft.trim())
+                        val message = draft
                         draft = ""
+                        scope.launch {
+                            controller.sendMessage(message)
+                        }
                     }
                 },
+                enabled = !processing,
             )
         }
     }
@@ -173,6 +190,7 @@ private fun HeaderBar(onNewChat: () -> Unit) {
 @Composable
 private fun ChatPanel(
     messages: List<ChatPreviewMessage>,
+    errorMessage: String?,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -184,7 +202,7 @@ private fun ChatPanel(
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.55f)),
     ) {
         if (messages.isEmpty()) {
-            EmptyState()
+            EmptyState(errorMessage)
         } else {
             Column(
                 modifier = Modifier
@@ -196,13 +214,16 @@ private fun ChatPanel(
                 messages.forEach { message ->
                     MessageBubble(message)
                 }
+                if (!errorMessage.isNullOrBlank()) {
+                    StatusText(errorMessage)
+                }
             }
         }
     }
 }
 
 @Composable
-private fun EmptyState() {
+private fun EmptyState(errorMessage: String?) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -236,7 +257,24 @@ private fun EmptyState() {
             color = Color(0xFF9CA3AF),
             fontSize = 14.sp,
         )
+        if (!errorMessage.isNullOrBlank()) {
+            Spacer(Modifier.height(12.dp))
+            StatusText(errorMessage)
+        }
     }
+}
+
+@Composable
+private fun StatusText(text: String) {
+    Text(
+        text = text,
+        color = Color(0xFFDC2626),
+        fontSize = 13.sp,
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color(0xFFFEF2F2))
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+    )
 }
 
 @Composable
@@ -304,6 +342,7 @@ private fun InputBar(
     value: String,
     onValueChange: (String) -> Unit,
     onSend: () -> Unit,
+    enabled: Boolean,
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -321,7 +360,7 @@ private fun InputBar(
             TextButtonLike(text = "图片")
             BasicTextField(
                 value = value,
-                onValueChange = onValueChange,
+                onValueChange = { if (enabled) onValueChange(it) },
                 singleLine = true,
                 textStyle = TextStyle(color = Color(0xFF111827), fontSize = 15.sp),
                 modifier = Modifier
@@ -348,7 +387,7 @@ private fun InputBar(
             )
             Button(
                 onClick = onSend,
-                enabled = value.isNotBlank(),
+                enabled = enabled && value.isNotBlank(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFFF97316),
                     disabledContainerColor = Color(0xFFD1D5DB),
