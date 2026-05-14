@@ -1,95 +1,134 @@
-This is a Kotlin Multiplatform project targeting Android, iOS, Web, Desktop (JVM), Server.
+# Kotlin Multiplatform 跨端应用说明
 
-* [/composeApp](./composeApp/src) is for code that will be shared across your Compose Multiplatform applications.
-  It contains several subfolders:
-  - [commonMain](./composeApp/src/commonMain/kotlin) is for code that’s common for all targets.
-  - Other folders are for Kotlin code that will be compiled for only the platform indicated in the folder name.
-    For example, if you want to use Apple’s CoreCrypto for the iOS part of your Kotlin app,
-    the [iosMain](./composeApp/src/iosMain/kotlin) folder would be the right place for such calls.
-    Similarly, if you want to edit the Desktop (JVM) specific part, the [jvmMain](./composeApp/src/jvmMain/kotlin)
-    folder is the appropriate location.
+`Multiplatform/` 是 AI 私厨的 Kotlin Multiplatform / Compose Multiplatform 项目，目标平台包括 Android、iOS、Desktop JVM、Web JS、Web Wasm 和 Ktor Server。
 
-* [/iosApp](./iosApp/iosApp) contains iOS applications. Even if you’re sharing your UI with Compose Multiplatform,
-  you need this entry point for your iOS app. This is also where you should add SwiftUI code for your project.
+当前 `composeApp` 已开始复刻 `frontCode/` 的前端界面：暖色背景、顶部标题栏、聊天面板、空状态、用户/助手消息气泡和底部输入栏。当前阶段重点是 UI 复刻，还没有接入真实后端接口、图片选择和流式响应。
 
-* [/server](./server/src/main/kotlin) is for the Ktor server application.
+## 目录结构
 
-* [/shared](./shared/src) is for the code that will be shared between all targets in the project.
-  The most important subfolder is [commonMain](./shared/src/commonMain/kotlin). If preferred, you
-  can add code to the platform-specific folders here too.
+```text
+Multiplatform/
+├── composeApp/                 # Compose Multiplatform 应用
+│   └── src/
+│       ├── commonMain/          # 跨平台共享 UI 和逻辑
+│       ├── androidMain/         # Android 专属入口
+│       ├── iosMain/             # iOS 专属入口
+│       ├── jvmMain/             # Desktop JVM 专属入口
+│       └── webMain/             # Web 专属入口
+├── iosApp/                      # iOS App 壳工程，需要 macOS + Xcode
+├── server/                      # Ktor Server 模块
+├── shared/                      # 多平台共享基础代码
+├── gradlew                      # macOS/Linux Gradle Wrapper
+└── gradlew.bat                  # Windows Gradle Wrapper
+```
 
-### Build and Run Android Application
+## 当前 UI 入口
 
-To build and run the development version of the Android app, use the run configuration from the run widget
-in your IDE’s toolbar or build it directly from the terminal:
-- on macOS/Linux
-  ```shell
-  ./gradlew :composeApp:assembleDebug
-  ```
-- on Windows
-  ```shell
-  .\gradlew.bat :composeApp:assembleDebug
-  ```
+跨端共享界面入口：
 
-### Build and Run Desktop (JVM) Application
+```text
+composeApp/src/commonMain/kotlin/com/example/multiplatform/App.kt
+```
 
-To build and run the development version of the desktop app, use the run configuration from the run widget
-in your IDE’s toolbar or run it directly from the terminal:
-- on macOS/Linux
-  ```shell
-  ./gradlew :composeApp:run
-  ```
-- on Windows
-  ```shell
-  .\gradlew.bat :composeApp:run
-  ```
+当前测试文件：
 
-### Build and Run Server
+```text
+composeApp/src/commonTest/kotlin/com/example/multiplatform/ComposeAppCommonTest.kt
+```
 
-To build and run the development version of the server, use the run configuration from the run widget
-in your IDE’s toolbar or run it directly from the terminal:
-- on macOS/Linux
-  ```shell
-  ./gradlew :server:run
-  ```
-- on Windows
-  ```shell
-  .\gradlew.bat :server:run
-  ```
+## Windows 常用命令
 
-### Build and Run Web Application
+以下命令均在 `Multiplatform/` 目录下执行。
 
-To build and run the development version of the web app, use the run configuration from the run widget
-in your IDE's toolbar or run it directly from the terminal:
-- for the Wasm target (faster, modern browsers):
-  - on macOS/Linux
-    ```shell
-    ./gradlew :composeApp:wasmJsBrowserDevelopmentRun
-    ```
-  - on Windows
-    ```shell
-    .\gradlew.bat :composeApp:wasmJsBrowserDevelopmentRun
-    ```
-- for the JS target (slower, supports older browsers):
-  - on macOS/Linux
-    ```shell
-    ./gradlew :composeApp:jsBrowserDevelopmentRun
-    ```
-  - on Windows
-    ```shell
-    .\gradlew.bat :composeApp:jsBrowserDevelopmentRun
-    ```
+查看所有 Gradle 任务：
 
-### Build and Run iOS Application
+```powershell
+.\gradlew.bat tasks --all
+```
 
-To build and run the development version of the iOS app, use the run configuration from the run widget
-in your IDE’s toolbar or open the [/iosApp](./iosApp) directory in Xcode and run it from there.
+编译 Android debug APK：
 
----
+```powershell
+.\gradlew.bat :composeApp:assembleDebug
+```
 
-Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html),
-[Compose Multiplatform](https://github.com/JetBrains/compose-multiplatform/#compose-multiplatform),
-[Kotlin/Wasm](https://kotl.in/wasm/)…
+运行 Desktop JVM 应用：
 
-We would appreciate your feedback on Compose/Web and Kotlin/Wasm in the public Slack channel [#compose-web](https://slack-chats.kotlinlang.org/c/compose-web).
-If you face any issues, please report them on [YouTrack](https://youtrack.jetbrains.com/newIssue?project=CMP).
+```powershell
+.\gradlew.bat :composeApp:run
+```
+
+构建 Desktop JVM jar：
+
+```powershell
+.\gradlew.bat :composeApp:jvmJar
+```
+
+运行 JVM 测试：
+
+```powershell
+.\gradlew.bat :composeApp:jvmTest
+```
+
+构建 Web Wasm 生产产物：
+
+```powershell
+.\gradlew.bat :composeApp:wasmJsBrowserDistribution
+```
+
+运行 Web Wasm 开发服务：
+
+```powershell
+.\gradlew.bat :composeApp:wasmJsBrowserDevelopmentRun
+```
+
+构建 Web JS 生产产物：
+
+```powershell
+.\gradlew.bat :composeApp:jsBrowserDistribution
+```
+
+运行 Web JS 开发服务：
+
+```powershell
+.\gradlew.bat :composeApp:jsBrowserDevelopmentRun
+```
+
+运行 Ktor Server：
+
+```powershell
+.\gradlew.bat :server:run
+```
+
+## iOS 运行说明
+
+iOS App 位于：
+
+```text
+iosApp/
+```
+
+完整 iOS 编译、签名和模拟器运行需要 macOS + Xcode。在 macOS 上打开 `iosApp` 目录中的 Xcode 工程后运行。
+
+## 已验证命令
+
+当前 UI 复刻后已验证：
+
+```powershell
+.\gradlew.bat :composeApp:jvmTestClasses
+.\gradlew.bat :composeApp:jvmTest
+.\gradlew.bat :composeApp:jvmJar
+.\gradlew.bat :composeApp:assembleDebug
+```
+
+以上命令均已通过。
+
+## 后续计划
+
+后续可以继续补充：
+
+- 接入 FastAPI 后端 `http://localhost:8001/api/v1/*`。
+- 实现真实聊天流式输出。
+- 实现图片选择和上传。
+- 将 Markdown 回复渲染到 Compose UI。
+- 补充 Android、Desktop、Web 端的实际运行截图验证。
