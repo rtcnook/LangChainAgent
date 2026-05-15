@@ -31,3 +31,9 @@ actual class ImagePicker {
         )
     }
 }
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+
+@Composable
+actual fun rememberImagePicker(): ImagePicker = remember { ImagePicker() }

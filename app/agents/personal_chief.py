@@ -31,8 +31,8 @@ model = init_chat_model(
 
 
 # 初始化checkpointer
-# 获取项目根目录下的数据库路径
-db_dir = Path(__file__).parent.parent / "db"
+# 获取项目根目录下的数据库路径 (位于 app 的上一级)
+db_dir = Path(__file__).parent.parent.parent / "db"
 db_dir.mkdir(exist_ok=True)
 db_path = db_dir / "personal_chief.db"
 
@@ -68,18 +68,36 @@ async def search_recipes(prompt: str, image: str, thread_id: str):
             message = HumanMessage(content=prompt)
         else:
             message = HumanMessage(content=[
-                {"type": "image", "url": image},
-                {"type": "text", "text": prompt}
+                {"type": "text", "text": prompt},
+                {"type": "image_url", "image_url": {"url": image}}
             ])
 
         # 流式调用Agent
-        for chunk, metadata in agent.stream(
+        logger.info("开始流式调用 Agent...")
+        yielded_any = False
+        async for chunk, metadata in agent.astream(
             {"messages": [message]},
             {"configurable": {"thread_id": thread_id}},
             stream_mode="messages"
         ):
-            if isinstance(chunk, AIMessageChunk) and chunk.content:
+            # 如果是 AIMessageChunk，检查内容和工具调用
+            if isinstance(chunk, AIMessageChunk):
+                if chunk.content:
+                    logger.info(f"Chunk: {chunk.content}")
+                    yielded_any = True
+                    yield chunk.content
+            
+            # 兼容普通 AIMessage
+            elif isinstance(chunk, AIMessage) and chunk.content:
+                logger.info(f"Message: {chunk.content}")
+                yielded_any = True
                 yield chunk.content
+                
+        if not yielded_any:
+            logger.warning("大模型没有返回任何有效文本。")
+            yield "大模型由于某些原因没有返回内容，这通常是开源多模态模型的上下文兼容问题。请点击右上角【新建会话】重新提问。"
+                
+        logger.info("Agent 流式调用结束")
 
     except Exception as e:
         logger.error(f"\n[错误]: {str(e)}")

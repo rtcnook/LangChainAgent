@@ -41,7 +41,7 @@ fun MessageBubble(
             verticalAlignment = Alignment.Top,
         ) {
             if (!message.isUser) {
-                GradientBadge(text = if (message.isStreaming) "..." else "厨", brush = ChefGradient)
+                GradientBadge(text = if (message.isStreaming && message.content.isEmpty()) "..." else "厨", brush = ChefGradient)
                 Spacer(Modifier.width(10.dp))
             }
             MessageCard(message = message, onCopy = onCopy)
@@ -73,7 +73,9 @@ private fun MessageCard(
                 lineHeight = 21.sp,
                 fontSize = 14.sp,
             )
-            CopyTextButton(color = Color.White.copy(alpha = 0.9f), onClick = onCopy)
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                CopyTextButton(color = Color.White.copy(alpha = 0.9f), text = "复制", onClick = onCopy)
+            }
         }
     } else {
         Card(
@@ -84,21 +86,25 @@ private fun MessageCard(
         ) {
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                 Text(
-                    text = message.content,
+                    text = if (message.isStreaming && message.content.isEmpty()) "⏳ AI 正在思考中..." else message.content,
                     color = Color(0xFF1F2937),
                     lineHeight = 21.sp,
                     fontSize = 14.sp,
                 )
-                CopyTextButton(color = Color(0xFFF97316), onClick = onCopy)
+                if (message.content.isNotEmpty()) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        CopyTextButton(color = Color(0xFFF97316), text = "复制", onClick = onCopy)
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun CopyTextButton(color: Color, onClick: () -> Unit) {
+private fun CopyTextButton(color: Color, text: String, onClick: () -> Unit) {
     Text(
-        text = "复制",
+        text = text,
         color = color,
         fontSize = 12.sp,
         fontWeight = FontWeight.Medium,

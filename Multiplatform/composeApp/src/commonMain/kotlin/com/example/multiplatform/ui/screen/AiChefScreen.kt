@@ -7,6 +7,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -26,10 +30,12 @@ import com.example.multiplatform.ui.theme.WarmBackground
 import com.example.multiplatform.ui.viewmodel.ChatViewModel
 import kotlinx.coroutines.launch
 
+import com.example.multiplatform.platform.rememberImagePicker
+
 @Composable
 fun AiChefScreen() {
     val viewModel = remember { ChatViewModel() }
-    val imagePicker = remember { ImagePicker() }
+    val imagePicker = rememberImagePicker()
     val clipboard = remember { AppClipboard() }
     val uiState by viewModel.uiState.collectAsState()
     val scope = rememberCoroutineScope()
@@ -43,6 +49,7 @@ fun AiChefScreen() {
         modifier = Modifier
             .fillMaxSize()
             .background(WarmBackground)
+            .safeDrawingPadding()
             .padding(16.dp),
     ) {
         Column(

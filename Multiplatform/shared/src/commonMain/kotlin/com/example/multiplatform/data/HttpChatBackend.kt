@@ -11,8 +11,12 @@ import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 import io.ktor.client.request.post
 import io.ktor.client.request.put
+import io.ktor.client.request.preparePost
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsChannel
 import io.ktor.client.statement.bodyAsText
+import io.ktor.utils.io.ByteReadChannel
+import io.ktor.utils.io.readAvailable
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.http.isSuccess
@@ -79,13 +83,18 @@ class HttpChatBackend(
             put("image_url", imageUrl ?: "")
         }.toString()
 
-        val responseText = client.post("$baseUrl/api/v1/chat/stream") {
+        client.preparePost("$baseUrl/api/v1/chat/stream") {
             contentType(ContentType.Application.Json)
             setBody(payload)
-        }.body<String>()
-
-        if (responseText.isNotBlank()) {
-            onChunk(responseText)
+        }.execute { response ->
+            val channel = response.bodyAsChannel()
+            val buffer = ByteArray(2048)
+            while (!channel.isClosedForRead) {
+                val read = channel.readAvailable(buffer)
+                if (read > 0) {
+                    onChunk(buffer.decodeToString(0, read))
+                }
+            }
         }
     }
 
