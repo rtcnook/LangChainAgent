@@ -1,4 +1,4 @@
-package com.example.multiplatform
+package com.example.multiplatform.platform
 
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection

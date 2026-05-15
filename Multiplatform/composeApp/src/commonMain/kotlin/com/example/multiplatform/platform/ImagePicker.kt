@@ -2,6 +2,6 @@ package com.example.multiplatform.platform
 
 import com.example.multiplatform.model.SelectedImage
 
-actual class ImagePicker {
-    actual suspend fun pickImage(): SelectedImage? = null
+expect class ImagePicker() {
+    suspend fun pickImage(): SelectedImage?
 }

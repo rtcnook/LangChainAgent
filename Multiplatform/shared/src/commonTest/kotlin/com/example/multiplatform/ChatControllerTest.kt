@@ -1,5 +1,11 @@
 package com.example.multiplatform
 
+import com.example.multiplatform.config.BackendConfig
+import com.example.multiplatform.data.ChatBackend
+import com.example.multiplatform.domain.ChatController
+import com.example.multiplatform.model.ChatMessage
+import com.example.multiplatform.model.ImageUploadTarget
+import com.example.multiplatform.model.SelectedImage
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -21,13 +27,13 @@ class ChatControllerTest {
     @Test
     fun loadHistoryReplacesMessagesFromBackend() = runBlocking {
         val backend = FakeChatBackend(
-            history = listOf(ChatPreviewMessage(isUser = false, content = "历史推荐"))
+            history = listOf(ChatMessage(isUser = false, content = "历史推荐")),
         )
         val controller = ChatController(backend)
 
         controller.loadHistory()
 
-        assertEquals(listOf(ChatPreviewMessage(isUser = false, content = "历史推荐")), controller.messages)
+        assertEquals(listOf(ChatMessage(isUser = false, content = "历史推荐")), controller.messages)
         assertEquals("default-thread", backend.loadedThreadId)
     }
 
@@ -40,8 +46,8 @@ class ChatControllerTest {
 
         assertFalse(controller.processing)
         assertEquals(2, controller.messages.size)
-        assertEquals(ChatPreviewMessage(isUser = true, content = "我有番茄和鸡蛋"), controller.messages[0])
-        assertEquals(ChatPreviewMessage(isUser = false, content = "推荐番茄炒蛋"), controller.messages[1])
+        assertEquals(ChatMessage(isUser = true, content = "我有番茄和鸡蛋"), controller.messages[0])
+        assertEquals(ChatMessage(isUser = false, content = "推荐番茄炒蛋"), controller.messages[1])
         assertEquals("我有番茄和鸡蛋", backend.sentMessage)
     }
 
@@ -60,13 +66,13 @@ class ChatControllerTest {
         assertEquals(byteArrayOf(1, 2, 3).toList(), backend.uploadedBytes?.toList())
         assertEquals("image/png", backend.uploadedContentType)
         assertEquals("https://example.com/1700000000000.png", backend.sentImageUrl)
-        assertEquals(ChatPreviewMessage(isUser = true, content = "识别这张图\n[图片]: 我的 番茄(1).PNG"), controller.messages[0])
+        assertEquals(ChatMessage(isUser = true, content = "识别这张图\n[图片]: 我的 番茄(1).PNG"), controller.messages[0])
     }
 
     @Test
     fun newChatClearsLocalAndRemoteHistory() = runBlocking {
         val backend = FakeChatBackend(
-            history = listOf(ChatPreviewMessage(isUser = true, content = "旧消息"))
+            history = listOf(ChatMessage(isUser = true, content = "旧消息")),
         )
         val controller = ChatController(backend)
         controller.loadHistory()
@@ -79,7 +85,7 @@ class ChatControllerTest {
 }
 
 private class FakeChatBackend(
-    private val history: List<ChatPreviewMessage> = emptyList(),
+    private val history: List<ChatMessage> = emptyList(),
     private val responseChunks: List<String> = emptyList(),
 ) : ChatBackend {
     var loadedThreadId: String? = null
@@ -90,7 +96,7 @@ private class FakeChatBackend(
     var uploadedBytes: ByteArray? = null
     var uploadedContentType: String? = null
 
-    override suspend fun getHistory(threadId: String): List<ChatPreviewMessage> {
+    override suspend fun getHistory(threadId: String): List<ChatMessage> {
         loadedThreadId = threadId
         return history
     }

@@ -1,5 +1,6 @@
-package com.example.multiplatform
+package com.example.multiplatform.platform
 
+import com.example.multiplatform.model.SelectedImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.awt.FileDialog
