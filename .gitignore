@@ -6,7 +6,7 @@ __pycache__/
 .langgraph_api/
 .uv-cache/
 app/.backend*.log
-app/db/personal_chief.db
+app/db/personal_chief.db*
 notebook/Ch2/resources/personal_chief.db*
 db/*.db*
 notebook/**/resources/*.db*

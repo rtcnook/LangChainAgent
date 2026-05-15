@@ -50,7 +50,7 @@ fun AiChefScreen() {
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Column(
-                modifier = Modifier.weight(3f),
+                modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
                 HeaderBar(
@@ -65,34 +65,27 @@ fun AiChefScreen() {
                         .fillMaxWidth(),
                 )
             }
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
-            ) {
-                InputBar(
-                    value = uiState.draft,
-                    onValueChange = viewModel::updateDraft,
-                    onSend = {
-                        scope.launch { viewModel.sendMessage() }
-                    },
-                    onPickImage = {
-                        scope.launch {
-                            imagePicker.pickImage()?.let { image ->
-                                viewModel.selectImage(image)
-                            }
+            InputBar(
+                value = uiState.draft,
+                onValueChange = viewModel::updateDraft,
+                onSend = {
+                    scope.launch { viewModel.sendMessage() }
+                },
+                onPickImage = {
+                    scope.launch {
+                        imagePicker.pickImage()?.let { image ->
+                            viewModel.selectImage(image)
                         }
-                    },
-                    onPasteClipboard = viewModel::pasteIntoDraft,
-                    readClipboardText = {
-                        clipboard.readText()?.takeIf { it.isNotBlank() }
-                    },
-                    onClearImage = viewModel::clearImage,
-                    selectedImageName = uiState.selectedImage?.fileName,
-                    enabled = !uiState.processing,
-                )
-            }
+                    }
+                },
+                onPasteClipboard = viewModel::pasteIntoDraft,
+                readClipboardText = {
+                    clipboard.readText()?.takeIf { it.isNotBlank() }
+                },
+                onClearImage = viewModel::clearImage,
+                selectedImageName = uiState.selectedImage?.fileName,
+                enabled = !uiState.processing,
+            )
         }
     }
 }
