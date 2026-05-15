@@ -34,6 +34,7 @@ fun InputBar(
     onValueChange: (String) -> Unit,
     onSend: () -> Unit,
     onPickImage: () -> Unit,
+    onPasteClipboard: () -> Unit,
     onClearImage: () -> Unit,
     selectedImageName: String?,
     enabled: Boolean,
@@ -55,6 +56,7 @@ fun InputBar(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 TextButtonLike(text = "图片", enabled = enabled, onClick = onPickImage)
+                TextButtonLike(text = "粘贴", enabled = enabled, onClick = onPasteClipboard)
                 BasicTextField(
                     value = value,
                     onValueChange = { if (enabled) onValueChange(it) },

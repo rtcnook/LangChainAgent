@@ -86,6 +86,13 @@ fun AiChefScreen() {
                         }
                     }
                 },
+                onPasteClipboard = {
+                    clipboard.readText()
+                        ?.takeIf { it.isNotBlank() }
+                        ?.let { copiedText ->
+                            draft = if (draft.isBlank()) copiedText else "$draft$copiedText"
+                        }
+                },
                 onClearImage = { selectedImage = null },
                 selectedImageName = selectedImage?.fileName,
                 enabled = !processing,
