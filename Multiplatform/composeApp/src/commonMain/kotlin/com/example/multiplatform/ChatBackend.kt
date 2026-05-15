@@ -2,6 +2,7 @@ package com.example.multiplatform
 
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.statement.bodyAsText
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
@@ -10,6 +11,7 @@ import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
+import io.ktor.http.isSuccess
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,6 +21,8 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
 data class SelectedImage(
     val fileName: String,
@@ -82,9 +86,13 @@ class HttpChatBackend(
     }
 
     override suspend fun uploadImage(target: ImageUploadTarget, bytes: ByteArray) {
-        client.put(target.uploadUrl) {
+        val response = client.put(target.uploadUrl) {
             contentType(ContentType.parse(target.contentType))
             setBody(bytes)
+        }
+        if (!response.status.isSuccess()) {
+            val detail = response.bodyAsText().take(200)
+            throw IllegalStateException("图片上传失败: ${response.status.value} $detail")
         }
     }
 
@@ -132,6 +140,7 @@ class HttpChatBackend(
 class ChatController(
     private val backend: ChatBackend,
     private val threadId: String = "default-thread",
+    private val uploadTimestampProvider: () -> Long = { currentTimeMillis() },
 ) {
     private val _messages = MutableStateFlow<List<ChatPreviewMessage>>(emptyList())
     val messagesFlow: StateFlow<List<ChatPreviewMessage>> = _messages.asStateFlow()
@@ -191,7 +200,7 @@ class ChatController(
 
         runCatching {
             val imageUrl = image?.let { selected ->
-                val uploadTarget = backend.presignImageUpload(selected.fileName)
+                val uploadTarget = backend.presignImageUpload(selected.toOssFileName())
                 backend.uploadImage(uploadTarget, selected.bytes)
                 uploadTarget.accessUrl
             }
@@ -218,4 +227,14 @@ class ChatController(
             }
         }
     }
+
+    private fun SelectedImage.toOssFileName(): String {
+        val extension = fileName.substringAfterLast('.', "jpg")
+            .lowercase()
+            .ifBlank { "jpg" }
+        return "${uploadTimestampProvider()}.$extension"
+    }
 }
+
+@OptIn(ExperimentalTime::class)
+fun currentTimeMillis(): Long = Clock.System.now().toEpochMilliseconds()

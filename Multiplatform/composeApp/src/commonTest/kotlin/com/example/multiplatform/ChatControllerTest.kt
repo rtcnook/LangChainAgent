@@ -37,19 +37,19 @@ class ChatControllerTest {
     @Test
     fun sendMessageUploadsSelectedImageAndPassesAccessUrl() = runBlocking {
         val backend = FakeChatBackend(responseChunks = listOf("看起来可以做番茄炒蛋"))
-        val controller = ChatController(backend)
+        val controller = ChatController(backend, uploadTimestampProvider = { 1700000000000L })
         val image = SelectedImage(
-            fileName = "tomato.png",
+            fileName = "我的 番茄(1).PNG",
             bytes = byteArrayOf(1, 2, 3),
         )
 
         controller.sendMessage("识别这张图", image)
 
-        assertEquals("tomato.png", backend.presignedFileName)
+        assertEquals("1700000000000.png", backend.presignedFileName)
         assertEquals(byteArrayOf(1, 2, 3).toList(), backend.uploadedBytes?.toList())
         assertEquals("image/png", backend.uploadedContentType)
-        assertEquals("https://example.com/tomato.png", backend.sentImageUrl)
-        assertEquals(ChatPreviewMessage(isUser = true, content = "识别这张图\n[图片]: tomato.png"), controller.messages[0])
+        assertEquals("https://example.com/1700000000000.png", backend.sentImageUrl)
+        assertEquals(ChatPreviewMessage(isUser = true, content = "识别这张图\n[图片]: 我的 番茄(1).PNG"), controller.messages[0])
     }
 
     @Test
@@ -102,9 +102,9 @@ private class FakeChatBackend(
     override suspend fun presignImageUpload(fileName: String): ImageUploadTarget {
         presignedFileName = fileName
         return ImageUploadTarget(
-            uploadUrl = "https://upload.example.com/tomato.png",
+            uploadUrl = "https://upload.example.com/$fileName",
             contentType = "image/png",
-            accessUrl = "https://example.com/tomato.png",
+            accessUrl = "https://example.com/$fileName",
         )
     }
 
