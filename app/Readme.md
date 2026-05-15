@@ -12,8 +12,10 @@
 当前 `frontCode/lib/api.ts` 中 API 地址写死为：
 
 ```text
-http://localhost:8001
+http://192.168.2.2:8001
 ```
+
+后端进程监听 `0.0.0.0:8001`，因此同一局域网内的手机、安卓应用、桌面端和前端页面都应访问电脑 IP `192.168.2.2:8001`。
 
 因此，前端联调和用户页面访问时，必须启动 FastAPI 网关，也就是 `app.main`，不要只启动 `uv run langgraph dev`。
 
@@ -114,7 +116,7 @@ http://127.0.0.1:8001/docs
 如果 `reload=True` 在当前终端环境下不稳定，可以用无 reload 方式启动：
 
 ```powershell
-uv run python -m uvicorn app.main:app --host 127.0.0.1 --port 8001
+uv run python -m uvicorn app.main:app --host 0.0.0.0 --port 8001
 ```
 
 ## FastAPI 接口

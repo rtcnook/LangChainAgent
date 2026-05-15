@@ -35,8 +35,16 @@ data class ImageUploadTarget(
     val accessUrl: String,
 )
 
+object BackendConfig {
+    const val defaultBaseUrl = "http://192.168.2.2:8001"
+}
+
 expect class ImagePicker() {
     suspend fun pickImage(): SelectedImage?
+}
+
+expect class AppClipboard() {
+    fun copy(text: String)
 }
 
 interface ChatBackend {
@@ -53,7 +61,7 @@ interface ChatBackend {
 }
 
 class HttpChatBackend(
-    private val baseUrl: String = "http://localhost:8001",
+    private val baseUrl: String = BackendConfig.defaultBaseUrl,
     private val client: HttpClient = HttpClient(),
 ) : ChatBackend {
     private val json = Json { ignoreUnknownKeys = true }

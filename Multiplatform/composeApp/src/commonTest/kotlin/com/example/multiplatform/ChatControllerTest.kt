@@ -8,6 +8,11 @@ import kotlin.test.assertFalse
 class ChatControllerTest {
 
     @Test
+    fun defaultBackendBaseUrlUsesComputerLanIp() {
+        assertEquals("http://192.168.2.2:8001", BackendConfig.defaultBaseUrl)
+    }
+
+    @Test
     fun loadHistoryReplacesMessagesFromBackend() = runBlocking {
         val backend = FakeChatBackend(
             history = listOf(ChatPreviewMessage(isUser = false, content = "历史推荐"))

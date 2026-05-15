@@ -103,6 +103,7 @@ private fun AiChefScreen() {
     var selectedImage by remember { mutableStateOf<SelectedImage?>(null) }
     val controller = remember { ChatController(HttpChatBackend()) }
     val imagePicker = remember { ImagePicker() }
+    val clipboard = remember { AppClipboard() }
     val messages by controller.messagesFlow.collectAsState()
     val processing by controller.processingFlow.collectAsState()
     val errorMessage by controller.errorMessageFlow.collectAsState()
@@ -128,6 +129,7 @@ private fun AiChefScreen() {
             ChatPanel(
                 messages = messages,
                 errorMessage = errorMessage,
+                onCopyMessage = { clipboard.copy(it) },
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth(),
@@ -205,6 +207,7 @@ private fun HeaderBar(onNewChat: () -> Unit) {
 private fun ChatPanel(
     messages: List<ChatPreviewMessage>,
     errorMessage: String?,
+    onCopyMessage: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -226,7 +229,10 @@ private fun ChatPanel(
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
                 messages.forEach { message ->
-                    MessageBubble(message)
+                    MessageBubble(
+                        message = message,
+                        onCopy = { onCopyMessage(message.content) },
+                    )
                 }
                 if (!errorMessage.isNullOrBlank()) {
                     StatusText(errorMessage)
@@ -292,7 +298,10 @@ private fun StatusText(text: String) {
 }
 
 @Composable
-private fun MessageBubble(message: ChatPreviewMessage) {
+private fun MessageBubble(
+    message: ChatPreviewMessage,
+    onCopy: () -> Unit,
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = if (message.isUser) Arrangement.End else Arrangement.Start,
@@ -306,7 +315,7 @@ private fun MessageBubble(message: ChatPreviewMessage) {
                 GradientBadge(text = if (message.isStreaming) "..." else "厨", brush = ChefGradient)
                 Spacer(Modifier.width(10.dp))
             }
-            MessageCard(message)
+            MessageCard(message = message, onCopy = onCopy)
             if (message.isUser) {
                 Spacer(Modifier.width(10.dp))
                 GradientBadge(text = "你", brush = UserGradient)
@@ -316,11 +325,14 @@ private fun MessageBubble(message: ChatPreviewMessage) {
 }
 
 @Composable
-private fun MessageCard(message: ChatPreviewMessage) {
+private fun MessageCard(
+    message: ChatPreviewMessage,
+    onCopy: () -> Unit,
+) {
     val shape = RoundedCornerShape(18.dp)
 
     if (message.isUser) {
-        Box(
+        Column(
             modifier = Modifier
                 .clip(shape)
                 .background(UserGradient)
@@ -332,6 +344,7 @@ private fun MessageCard(message: ChatPreviewMessage) {
                 lineHeight = 21.sp,
                 fontSize = 14.sp,
             )
+            CopyTextButton(color = Color.White.copy(alpha = 0.9f), onClick = onCopy)
         }
     } else {
         Card(
@@ -340,15 +353,32 @@ private fun MessageCard(message: ChatPreviewMessage) {
             border = BorderStroke(1.dp, Color(0xFFF3F4F6)),
             elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         ) {
-            Text(
-                text = message.content,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                color = Color(0xFF1F2937),
-                lineHeight = 21.sp,
-                fontSize = 14.sp,
-            )
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                Text(
+                    text = message.content,
+                    color = Color(0xFF1F2937),
+                    lineHeight = 21.sp,
+                    fontSize = 14.sp,
+                )
+                CopyTextButton(color = Color(0xFFF97316), onClick = onCopy)
+            }
         }
     }
+}
+
+@Composable
+private fun CopyTextButton(color: Color, onClick: () -> Unit) {
+    Text(
+        text = "复制",
+        color = color,
+        fontSize = 12.sp,
+        fontWeight = FontWeight.Medium,
+        modifier = Modifier
+            .padding(top = 8.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 2.dp, vertical = 2.dp),
+    )
 }
 
 @Composable
