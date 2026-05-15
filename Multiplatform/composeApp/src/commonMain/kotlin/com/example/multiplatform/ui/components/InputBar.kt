@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -45,7 +45,8 @@ fun InputBar(
     onValueChange: (TextFieldValue) -> Unit,
     onSend: () -> Unit,
     onPickImage: () -> Unit,
-    onPasteClipboard: () -> String?,
+    onPasteClipboard: (String) -> Unit,
+    readClipboardText: () -> String?,
     onClearImage: () -> Unit,
     selectedImageName: String?,
     enabled: Boolean,
@@ -70,11 +71,12 @@ fun InputBar(
                 BasicTextField(
                     value = value,
                     onValueChange = { if (enabled) onValueChange(it) },
-                    singleLine = true,
+                    singleLine = false,
+                    minLines = 1,
                     textStyle = TextStyle(color = Color(0xFF111827), fontSize = 15.sp),
                     modifier = Modifier
                         .weight(1f)
-                        .height(44.dp)
+                        .defaultMinSize(minHeight = 44.dp)
                         .clip(RoundedCornerShape(18.dp))
                         .background(Color(0xFFF3F4F6).copy(alpha = 0.85f))
                         .onPreviewKeyEvent { event ->
@@ -84,9 +86,9 @@ fun InputBar(
                                 event.key == Key.V &&
                                 (event.isCtrlPressed || event.isMetaPressed)
                             ) {
-                                val pastedText = onPasteClipboard()
+                                val pastedText = readClipboardText()
                                 if (!pastedText.isNullOrBlank()) {
-                                    onValueChange(value.insertText(pastedText))
+                                    onPasteClipboard(pastedText)
                                     true
                                 } else {
                                     false
@@ -120,7 +122,7 @@ fun InputBar(
                         disabledContainerColor = Color(0xFFD1D5DB),
                     ),
                     shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier.height(44.dp),
+                    modifier = Modifier.defaultMinSize(minHeight = 44.dp),
                 ) {
                     Text("发送", color = Color.White)
                 }

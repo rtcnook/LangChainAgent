@@ -11,38 +11,30 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
-import com.example.multiplatform.data.HttpChatBackend
-import com.example.multiplatform.domain.ChatController
-import com.example.multiplatform.model.SelectedImage
 import com.example.multiplatform.platform.AppClipboard
 import com.example.multiplatform.platform.ImagePicker
 import com.example.multiplatform.ui.components.ChatPanel
 import com.example.multiplatform.ui.components.HeaderBar
 import com.example.multiplatform.ui.components.InputBar
 import com.example.multiplatform.ui.theme.WarmBackground
+import com.example.multiplatform.ui.viewmodel.ChatViewModel
 import kotlinx.coroutines.launch
 
 @Composable
 fun AiChefScreen() {
-    var draft by remember { mutableStateOf(TextFieldValue("")) }
-    var selectedImage by remember { mutableStateOf<SelectedImage?>(null) }
-    val controller = remember { ChatController(HttpChatBackend()) }
+    val viewModel = remember { ChatViewModel() }
     val imagePicker = remember { ImagePicker() }
     val clipboard = remember { AppClipboard() }
-    val messages by controller.messagesFlow.collectAsState()
-    val processing by controller.processingFlow.collectAsState()
-    val errorMessage by controller.errorMessageFlow.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(controller) {
-        controller.loadHistory()
+    LaunchedEffect(viewModel) {
+        viewModel.bind(this)
+        viewModel.loadHistory()
     }
 
     Box(
@@ -56,43 +48,36 @@ fun AiChefScreen() {
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             HeaderBar(
-                onNewChat = { scope.launch { controller.newChat() } },
+                onNewChat = { scope.launch { viewModel.newChat() } },
             )
             ChatPanel(
-                messages = messages,
-                errorMessage = errorMessage,
+                messages = uiState.messages,
+                errorMessage = uiState.errorMessage,
                 onCopyMessage = { clipboard.copy(it) },
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth(),
             )
             InputBar(
-                value = draft,
-                onValueChange = { draft = it },
+                value = uiState.draft,
+                onValueChange = viewModel::updateDraft,
                 onSend = {
-                    if (draft.text.isNotBlank() || selectedImage != null) {
-                        val message = draft.text.ifBlank { "请识别这张图片" }
-                        val image = selectedImage
-                        draft = TextFieldValue("")
-                        selectedImage = null
-                        scope.launch {
-                            controller.sendMessage(message, image)
-                        }
-                    }
+                    scope.launch { viewModel.sendMessage() }
                 },
                 onPickImage = {
                     scope.launch {
                         imagePicker.pickImage()?.let { image ->
-                            selectedImage = image
+                            viewModel.selectImage(image)
                         }
                     }
                 },
-                onPasteClipboard = {
+                onPasteClipboard = viewModel::pasteIntoDraft,
+                readClipboardText = {
                     clipboard.readText()?.takeIf { it.isNotBlank() }
                 },
-                onClearImage = { selectedImage = null },
-                selectedImageName = selectedImage?.fileName,
-                enabled = !processing,
+                onClearImage = viewModel::clearImage,
+                selectedImageName = uiState.selectedImage?.fileName,
+                enabled = !uiState.processing,
             )
         }
     }
