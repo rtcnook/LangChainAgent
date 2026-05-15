@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -48,7 +50,7 @@ fun AiChefScreen() {
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Column(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(3f),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
                 HeaderBar(
@@ -63,27 +65,34 @@ fun AiChefScreen() {
                         .fillMaxWidth(),
                 )
             }
-            InputBar(
-                value = uiState.draft,
-                onValueChange = viewModel::updateDraft,
-                onSend = {
-                    scope.launch { viewModel.sendMessage() }
-                },
-                onPickImage = {
-                    scope.launch {
-                        imagePicker.pickImage()?.let { image ->
-                            viewModel.selectImage(image)
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                InputBar(
+                    value = uiState.draft,
+                    onValueChange = viewModel::updateDraft,
+                    onSend = {
+                        scope.launch { viewModel.sendMessage() }
+                    },
+                    onPickImage = {
+                        scope.launch {
+                            imagePicker.pickImage()?.let { image ->
+                                viewModel.selectImage(image)
+                            }
                         }
-                    }
-                },
-                onPasteClipboard = viewModel::pasteIntoDraft,
-                readClipboardText = {
-                    clipboard.readText()?.takeIf { it.isNotBlank() }
-                },
-                onClearImage = viewModel::clearImage,
-                selectedImageName = uiState.selectedImage?.fileName,
-                enabled = !uiState.processing,
-            )
+                    },
+                    onPasteClipboard = viewModel::pasteIntoDraft,
+                    readClipboardText = {
+                        clipboard.readText()?.takeIf { it.isNotBlank() }
+                    },
+                    onClearImage = viewModel::clearImage,
+                    selectedImageName = uiState.selectedImage?.fileName,
+                    enabled = !uiState.processing,
+                )
+            }
         }
     }
 }
