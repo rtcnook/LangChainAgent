@@ -56,6 +56,8 @@ http://localhost:8001
 ```text
 GET    /api/v1/chat/messages?thread_id=default-thread
 DELETE /api/v1/chat/messages?thread_id=default-thread
+GET    /api/v1/oss/presign?filename=<image-name>
+PUT    <OSS presigned uploadUrl>
 POST   /api/v1/chat/stream
 ```
 
@@ -64,6 +66,18 @@ POST   /api/v1/chat/stream
 ```powershell
 uv run python -m app.main
 ```
+
+## 桌面端图片上传
+
+Desktop JVM 端已经支持点击底部“图片”按钮打开系统文件选择器。支持选择 `jpg`、`jpeg`、`png`、`gif`、`webp` 图片。
+
+发送时流程如下：
+
+```text
+选择本地图片 -> 请求 /api/v1/oss/presign -> PUT 上传到 OSS -> 将 accessUrl 作为 image_url 发送给 /api/v1/chat/stream
+```
+
+Android、iOS、Web 目前保留空实现，后续可以接入各平台原生图片选择器。
 
 ## Windows 常用命令
 
@@ -147,17 +161,18 @@ iosApp/
 .\gradlew.bat :composeApp:jvmTestClasses
 .\gradlew.bat :composeApp:jvmTest
 .\gradlew.bat :composeApp:jvmJar
+.\gradlew.bat :composeApp:assembleDebug
 .\gradlew.bat :composeApp:jsBrowserDistribution
 .\gradlew.bat :composeApp:wasmJsBrowserDistribution
 ```
 
-Android Debug 包也已使用独立构建目录验证通过。若标准 `.\gradlew.bat :composeApp:assembleDebug` 在 Windows 上提示 `R.jar` 被占用，关闭 IDE 或释放旧 `build/` 目录文件锁后重试即可。
+以上命令均已通过。若 Windows 上偶发提示 `R.jar` 被占用，关闭 IDE 或释放旧 `build/` 目录文件锁后重试即可。
 
 ## 后续计划
 
 后续可以继续补充：
 
 - 将 `POST /api/v1/chat/stream` 改成真正逐块消费响应，而不是等待请求结束后一次性渲染。
-- 实现图片选择和上传。
+- 为 Android、iOS、Web 分别接入原生图片选择器。
 - 将 Markdown 回复渲染到 Compose UI。
 - 补充 Android、Desktop、Web 端的实际运行截图验证。

@@ -6,6 +6,7 @@ import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 import io.ktor.client.request.post
+import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
@@ -19,9 +20,26 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
+data class SelectedImage(
+    val fileName: String,
+    val bytes: ByteArray,
+)
+
+data class ImageUploadTarget(
+    val uploadUrl: String,
+    val contentType: String,
+    val accessUrl: String,
+)
+
+expect class ImagePicker() {
+    suspend fun pickImage(): SelectedImage?
+}
+
 interface ChatBackend {
     suspend fun getHistory(threadId: String): List<ChatPreviewMessage>
     suspend fun clearHistory(threadId: String)
+    suspend fun presignImageUpload(fileName: String): ImageUploadTarget
+    suspend fun uploadImage(target: ImageUploadTarget, bytes: ByteArray)
     suspend fun streamChat(
         threadId: String,
         message: String,
@@ -47,6 +65,26 @@ class HttpChatBackend(
     override suspend fun clearHistory(threadId: String) {
         client.delete("$baseUrl/api/v1/chat/messages") {
             parameter("thread_id", threadId)
+        }
+    }
+
+    override suspend fun presignImageUpload(fileName: String): ImageUploadTarget {
+        val body = client.get("$baseUrl/api/v1/oss/presign") {
+            parameter("filename", fileName)
+        }.body<String>()
+
+        val root = json.parseToJsonElement(body).jsonObject
+        return ImageUploadTarget(
+            uploadUrl = root["uploadUrl"]?.jsonPrimitive?.content?.trimQuotes() ?: "",
+            contentType = root["contentType"]?.jsonPrimitive?.content ?: "application/octet-stream",
+            accessUrl = root["accessUrl"]?.jsonPrimitive?.content?.trimQuotes() ?: "",
+        )
+    }
+
+    override suspend fun uploadImage(target: ImageUploadTarget, bytes: ByteArray) {
+        client.put(target.uploadUrl) {
+            contentType(ContentType.parse(target.contentType))
+            setBody(bytes)
         }
     }
 
@@ -87,6 +125,8 @@ class HttpChatBackend(
             )
         }
     }
+
+    private fun String.trimQuotes(): String = trim().trim('"', '\'')
 }
 
 class ChatController(
@@ -130,11 +170,16 @@ class ChatController(
         }
     }
 
-    suspend fun sendMessage(text: String, imageUrl: String? = null) {
+    suspend fun sendMessage(text: String, image: SelectedImage? = null) {
         val trimmed = text.trim()
-        if (trimmed.isEmpty() || _processing.value) return
+        if ((trimmed.isEmpty() && image == null) || _processing.value) return
 
-        val userMessage = ChatPreviewMessage(isUser = true, content = trimmed)
+        val userContent = if (image == null) {
+            trimmed
+        } else {
+            "$trimmed\n[图片]: ${image.fileName}".trim()
+        }
+        val userMessage = ChatPreviewMessage(isUser = true, content = userContent)
         val assistantIndex = _messages.value.size + 1
         _messages.value = _messages.value + userMessage + ChatPreviewMessage(
             isUser = false,
@@ -145,7 +190,12 @@ class ChatController(
         _errorMessage.value = null
 
         runCatching {
-            backend.streamChat(threadId, trimmed, imageUrl) { chunk ->
+            val imageUrl = image?.let { selected ->
+                val uploadTarget = backend.presignImageUpload(selected.fileName)
+                backend.uploadImage(uploadTarget, selected.bytes)
+                uploadTarget.accessUrl
+            }
+            backend.streamChat(threadId, trimmed.ifEmpty { "请识别这张图片" }, imageUrl) { chunk ->
                 appendAssistantChunk(assistantIndex, chunk)
             }
         }.onFailure { error ->

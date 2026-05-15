@@ -35,6 +35,24 @@ class ChatControllerTest {
     }
 
     @Test
+    fun sendMessageUploadsSelectedImageAndPassesAccessUrl() = runBlocking {
+        val backend = FakeChatBackend(responseChunks = listOf("看起来可以做番茄炒蛋"))
+        val controller = ChatController(backend)
+        val image = SelectedImage(
+            fileName = "tomato.png",
+            bytes = byteArrayOf(1, 2, 3),
+        )
+
+        controller.sendMessage("识别这张图", image)
+
+        assertEquals("tomato.png", backend.presignedFileName)
+        assertEquals(byteArrayOf(1, 2, 3).toList(), backend.uploadedBytes?.toList())
+        assertEquals("image/png", backend.uploadedContentType)
+        assertEquals("https://example.com/tomato.png", backend.sentImageUrl)
+        assertEquals(ChatPreviewMessage(isUser = true, content = "识别这张图\n[图片]: tomato.png"), controller.messages[0])
+    }
+
+    @Test
     fun newChatClearsLocalAndRemoteHistory() = runBlocking {
         val backend = FakeChatBackend(
             history = listOf(ChatPreviewMessage(isUser = true, content = "旧消息"))
@@ -56,6 +74,10 @@ private class FakeChatBackend(
     var loadedThreadId: String? = null
     var clearedThreadId: String? = null
     var sentMessage: String? = null
+    var sentImageUrl: String? = null
+    var presignedFileName: String? = null
+    var uploadedBytes: ByteArray? = null
+    var uploadedContentType: String? = null
 
     override suspend fun getHistory(threadId: String): List<ChatPreviewMessage> {
         loadedThreadId = threadId
@@ -73,6 +95,21 @@ private class FakeChatBackend(
         onChunk: (String) -> Unit,
     ) {
         sentMessage = message
+        sentImageUrl = imageUrl
         responseChunks.forEach(onChunk)
+    }
+
+    override suspend fun presignImageUpload(fileName: String): ImageUploadTarget {
+        presignedFileName = fileName
+        return ImageUploadTarget(
+            uploadUrl = "https://upload.example.com/tomato.png",
+            contentType = "image/png",
+            accessUrl = "https://example.com/tomato.png",
+        )
+    }
+
+    override suspend fun uploadImage(target: ImageUploadTarget, bytes: ByteArray) {
+        uploadedBytes = bytes
+        uploadedContentType = target.contentType
     }
 }

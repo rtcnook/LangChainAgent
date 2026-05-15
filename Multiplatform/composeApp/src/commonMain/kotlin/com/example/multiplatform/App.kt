@@ -2,6 +2,7 @@ package com.example.multiplatform
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -99,7 +100,9 @@ fun App() {
 @Composable
 private fun AiChefScreen() {
     var draft by remember { mutableStateOf("") }
+    var selectedImage by remember { mutableStateOf<SelectedImage?>(null) }
     val controller = remember { ChatController(HttpChatBackend()) }
+    val imagePicker = remember { ImagePicker() }
     val messages by controller.messagesFlow.collectAsState()
     val processing by controller.processingFlow.collectAsState()
     val errorMessage by controller.errorMessageFlow.collectAsState()
@@ -133,14 +136,25 @@ private fun AiChefScreen() {
                 value = draft,
                 onValueChange = { draft = it },
                 onSend = {
-                    if (draft.isNotBlank()) {
-                        val message = draft
+                    if (draft.isNotBlank() || selectedImage != null) {
+                        val message = draft.ifBlank { "请识别这张图片" }
+                        val image = selectedImage
                         draft = ""
+                        selectedImage = null
                         scope.launch {
-                            controller.sendMessage(message)
+                            controller.sendMessage(message, image)
                         }
                     }
                 },
+                onPickImage = {
+                    scope.launch {
+                        imagePicker.pickImage()?.let { image ->
+                            selectedImage = image
+                        }
+                    }
+                },
+                onClearImage = { selectedImage = null },
+                selectedImageName = selectedImage?.fileName,
                 enabled = !processing,
             )
         }
@@ -342,6 +356,9 @@ private fun InputBar(
     value: String,
     onValueChange: (String) -> Unit,
     onSend: () -> Unit,
+    onPickImage: () -> Unit,
+    onClearImage: () -> Unit,
+    selectedImageName: String?,
     enabled: Boolean,
 ) {
     Surface(
@@ -352,50 +369,78 @@ private fun InputBar(
         shape = RoundedCornerShape(20.dp),
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.55f)),
     ) {
-        Row(
+        Column(
             modifier = Modifier.padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            TextButtonLike(text = "图片")
-            BasicTextField(
-                value = value,
-                onValueChange = { if (enabled) onValueChange(it) },
-                singleLine = true,
-                textStyle = TextStyle(color = Color(0xFF111827), fontSize = 15.sp),
-                modifier = Modifier
-                    .weight(1f)
-                    .height(44.dp)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(Color(0xFFF3F4F6).copy(alpha = 0.85f))
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                decorationBox = { innerTextField ->
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.CenterStart,
-                    ) {
-                        if (value.isEmpty()) {
-                            Text(
-                                text = AppCopy.inputPlaceholder,
-                                color = Color(0xFF9CA3AF),
-                                fontSize = 15.sp,
-                            )
-                        }
-                        innerTextField()
-                    }
-                },
-            )
-            Button(
-                onClick = onSend,
-                enabled = enabled && value.isNotBlank(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFF97316),
-                    disabledContainerColor = Color(0xFFD1D5DB),
-                ),
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier.height(44.dp),
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Text("发送", color = Color.White)
+                TextButtonLike(text = "图片", enabled = enabled, onClick = onPickImage)
+                BasicTextField(
+                    value = value,
+                    onValueChange = { if (enabled) onValueChange(it) },
+                    singleLine = true,
+                    textStyle = TextStyle(color = Color(0xFF111827), fontSize = 15.sp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(44.dp)
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(Color(0xFFF3F4F6).copy(alpha = 0.85f))
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    decorationBox = { innerTextField ->
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.CenterStart,
+                        ) {
+                            if (value.isEmpty()) {
+                                Text(
+                                    text = AppCopy.inputPlaceholder,
+                                    color = Color(0xFF9CA3AF),
+                                    fontSize = 15.sp,
+                                )
+                            }
+                            innerTextField()
+                        }
+                    },
+                )
+                Button(
+                    onClick = onSend,
+                    enabled = enabled && (value.isNotBlank() || selectedImageName != null),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFF97316),
+                        disabledContainerColor = Color(0xFFD1D5DB),
+                    ),
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.height(44.dp),
+                ) {
+                    Text("发送", color = Color.White)
+                }
+            }
+            if (selectedImageName != null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFFFFF7ED))
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "已选择：$selectedImageName",
+                        color = Color(0xFF9A3412),
+                        fontSize = 13.sp,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(
+                        text = "移除",
+                        color = Color(0xFFEA580C),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.clickable(enabled = enabled, onClick = onClearImage),
+                    )
+                }
             }
         }
     }
@@ -420,15 +465,21 @@ private fun GradientBadge(text: String, brush: Brush) {
 }
 
 @Composable
-private fun TextButtonLike(text: String) {
+private fun TextButtonLike(text: String, enabled: Boolean, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .height(44.dp)
             .clip(RoundedCornerShape(14.dp))
-            .background(Color(0xFFFFF7ED))
+            .background(if (enabled) Color(0xFFFFF7ED) else Color(0xFFF3F4F6))
+            .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 12.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text = text, color = Color(0xFFF97316), fontSize = 14.sp, fontWeight = FontWeight.Medium)
+        Text(
+            text = text,
+            color = if (enabled) Color(0xFFF97316) else Color(0xFF9CA3AF),
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium,
+        )
     }
 }
