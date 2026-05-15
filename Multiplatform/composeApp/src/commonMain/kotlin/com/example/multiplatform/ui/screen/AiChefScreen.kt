@@ -47,17 +47,22 @@ fun AiChefScreen() {
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            HeaderBar(
-                onNewChat = { scope.launch { viewModel.newChat() } },
-            )
-            ChatPanel(
-                messages = uiState.messages,
-                errorMessage = uiState.errorMessage,
-                onCopyMessage = { clipboard.copy(it) },
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                HeaderBar(
+                    onNewChat = { scope.launch { viewModel.newChat() } },
+                )
+                ChatPanel(
+                    messages = uiState.messages,
+                    errorMessage = uiState.errorMessage,
+                    onCopyMessage = { clipboard.copy(it) },
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                )
+            }
             InputBar(
                 value = uiState.draft,
                 onValueChange = viewModel::updateDraft,

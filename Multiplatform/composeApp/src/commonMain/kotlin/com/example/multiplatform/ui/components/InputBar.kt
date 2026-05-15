@@ -7,9 +7,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -64,7 +64,7 @@ fun InputBar(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Row(
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.Bottom,
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 TextButtonLike(text = "上传图片", enabled = enabled, onClick = onPickImage)
@@ -76,7 +76,7 @@ fun InputBar(
                     textStyle = TextStyle(color = Color(0xFF111827), fontSize = 15.sp),
                     modifier = Modifier
                         .weight(1f)
-                        .defaultMinSize(minHeight = 44.dp)
+                        .heightIn(min = 44.dp)
                         .clip(RoundedCornerShape(18.dp))
                         .background(Color(0xFFF3F4F6).copy(alpha = 0.85f))
                         .onPreviewKeyEvent { event ->
@@ -100,7 +100,7 @@ fun InputBar(
                         .padding(horizontal = 14.dp, vertical = 12.dp),
                     decorationBox = { innerTextField ->
                         Box(
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier.fillMaxWidth(),
                             contentAlignment = Alignment.CenterStart,
                         ) {
                             if (value.text.isEmpty()) {
