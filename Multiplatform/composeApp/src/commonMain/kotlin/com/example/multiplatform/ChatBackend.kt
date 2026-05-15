@@ -2,6 +2,7 @@ package com.example.multiplatform
 
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.statement.bodyAsText
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
@@ -37,6 +38,8 @@ data class ImageUploadTarget(
 
 object BackendConfig {
     const val defaultBaseUrl = "http://192.168.2.2:8001"
+    const val connectTimeoutMillis = 15_000L
+    const val chatRequestTimeoutMillis = 600_000L
 }
 
 expect class ImagePicker() {
@@ -62,7 +65,7 @@ interface ChatBackend {
 
 class HttpChatBackend(
     private val baseUrl: String = BackendConfig.defaultBaseUrl,
-    private val client: HttpClient = HttpClient(),
+    private val client: HttpClient = defaultChatHttpClient(),
 ) : ChatBackend {
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -246,3 +249,11 @@ class ChatController(
 
 @OptIn(ExperimentalTime::class)
 fun currentTimeMillis(): Long = Clock.System.now().toEpochMilliseconds()
+
+private fun defaultChatHttpClient(): HttpClient = HttpClient {
+    install(HttpTimeout) {
+        connectTimeoutMillis = BackendConfig.connectTimeoutMillis
+        requestTimeoutMillis = BackendConfig.chatRequestTimeoutMillis
+        socketTimeoutMillis = BackendConfig.chatRequestTimeoutMillis
+    }
+}

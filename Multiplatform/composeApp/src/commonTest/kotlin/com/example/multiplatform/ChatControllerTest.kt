@@ -13,6 +13,12 @@ class ChatControllerTest {
     }
 
     @Test
+    fun chatTimeoutAllowsLongRunningRecipeRequests() {
+        assertEquals(15_000L, BackendConfig.connectTimeoutMillis)
+        assertEquals(600_000L, BackendConfig.chatRequestTimeoutMillis)
+    }
+
+    @Test
     fun loadHistoryReplacesMessagesFromBackend() = runBlocking {
         val backend = FakeChatBackend(
             history = listOf(ChatPreviewMessage(isUser = false, content = "历史推荐"))
