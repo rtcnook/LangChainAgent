@@ -52,11 +52,7 @@ system_prompt = """
 """
 
 # 创建代理
-agent = create_agent(
-    model=model,
-    tools=[tavily],
-    system_prompt=system_prompt
-)
+# 代理将在 search_recipes 中动态创建以支持异步 checkpointer
 
 # 流式对话
 async def search_recipes(prompt: str, image: str, thread_id: str):
@@ -75,23 +71,36 @@ async def search_recipes(prompt: str, image: str, thread_id: str):
         # 流式调用Agent
         logger.info("开始流式调用 Agent...")
         yielded_any = False
-        async for chunk, metadata in agent.astream(
-            {"messages": [message]},
-            {"configurable": {"thread_id": thread_id}},
-            stream_mode="messages"
-        ):
-            # 如果是 AIMessageChunk，检查内容和工具调用
-            if isinstance(chunk, AIMessageChunk):
-                if chunk.content:
-                    logger.info(f"Chunk: {chunk.content}")
+        
+        from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+        
+        # 必须在异步上下文中初始化支持异步的 checkpointer
+        async with AsyncSqliteSaver.from_conn_string(str(db_path)) as async_checkpointer:
+            # 每次请求动态创建 agent，绑定异步记忆模块
+            agent = create_agent(
+                model=model,
+                tools=[tavily],
+                system_prompt=system_prompt,
+                checkpointer=async_checkpointer
+            )
+            
+            async for chunk, metadata in agent.astream(
+                {"messages": [message]},
+                {"configurable": {"thread_id": thread_id}},
+                stream_mode="messages"
+            ):
+                # 如果是 AIMessageChunk，检查内容和工具调用
+                if isinstance(chunk, AIMessageChunk):
+                    if chunk.content:
+                        logger.info(f"Chunk: {chunk.content}")
+                        yielded_any = True
+                        yield chunk.content
+                
+                # 兼容普通 AIMessage
+                elif isinstance(chunk, AIMessage) and chunk.content:
+                    logger.info(f"Message: {chunk.content}")
                     yielded_any = True
                     yield chunk.content
-            
-            # 兼容普通 AIMessage
-            elif isinstance(chunk, AIMessage) and chunk.content:
-                logger.info(f"Message: {chunk.content}")
-                yielded_any = True
-                yield chunk.content
                 
         if not yielded_any:
             logger.warning("大模型没有返回任何有效文本。")
