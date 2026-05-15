@@ -22,6 +22,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -55,8 +62,7 @@ fun InputBar(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                TextButtonLike(text = "图片", enabled = enabled, onClick = onPickImage)
-                TextButtonLike(text = "粘贴", enabled = enabled, onClick = onPasteClipboard)
+                TextButtonLike(text = "上传图片", enabled = enabled, onClick = onPickImage)
                 BasicTextField(
                     value = value,
                     onValueChange = { if (enabled) onValueChange(it) },
@@ -67,6 +73,19 @@ fun InputBar(
                         .height(44.dp)
                         .clip(RoundedCornerShape(18.dp))
                         .background(Color(0xFFF3F4F6).copy(alpha = 0.85f))
+                        .onPreviewKeyEvent { event ->
+                            if (
+                                enabled &&
+                                event.type == KeyEventType.KeyDown &&
+                                event.key == Key.V &&
+                                (event.isCtrlPressed || event.isMetaPressed)
+                            ) {
+                                onPasteClipboard()
+                                true
+                            } else {
+                                false
+                            }
+                        }
                         .padding(horizontal = 14.dp, vertical = 12.dp),
                     decorationBox = { innerTextField ->
                         Box(
