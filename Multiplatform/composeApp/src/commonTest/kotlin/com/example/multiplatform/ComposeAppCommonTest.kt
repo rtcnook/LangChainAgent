@@ -1,7 +1,10 @@
 package com.example.multiplatform
 
 import com.example.multiplatform.ui.AppCopy
+import com.example.multiplatform.ui.components.insertText
 import com.example.multiplatform.ui.sampleConversation
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -24,5 +27,18 @@ class ComposeAppCommonTest {
         assertEquals("我有鸡胸肉、西兰花和胡萝卜，可以做什么？", messages.first().content)
         assertEquals(false, messages.last().isUser)
         assertTrue(messages.last().content.contains("鸡胸肉西兰花烤盘料理"))
+    }
+
+    @Test
+    fun pastedTextIsInsertedAtCurrentSelection() {
+        val value = TextFieldValue(
+            text = "我想做菜",
+            selection = TextRange(1, 3),
+        )
+
+        val nextValue = value.insertText("复制内容")
+
+        assertEquals("我复制内容菜", nextValue.text)
+        assertEquals(TextRange(5), nextValue.selection)
     }
 }

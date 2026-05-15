@@ -16,6 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.example.multiplatform.data.HttpChatBackend
 import com.example.multiplatform.domain.ChatController
@@ -30,7 +31,7 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun AiChefScreen() {
-    var draft by remember { mutableStateOf("") }
+    var draft by remember { mutableStateOf(TextFieldValue("")) }
     var selectedImage by remember { mutableStateOf<SelectedImage?>(null) }
     val controller = remember { ChatController(HttpChatBackend()) }
     val imagePicker = remember { ImagePicker() }
@@ -69,10 +70,10 @@ fun AiChefScreen() {
                 value = draft,
                 onValueChange = { draft = it },
                 onSend = {
-                    if (draft.isNotBlank() || selectedImage != null) {
-                        val message = draft.ifBlank { "请识别这张图片" }
+                    if (draft.text.isNotBlank() || selectedImage != null) {
+                        val message = draft.text.ifBlank { "请识别这张图片" }
                         val image = selectedImage
-                        draft = ""
+                        draft = TextFieldValue("")
                         selectedImage = null
                         scope.launch {
                             controller.sendMessage(message, image)
@@ -87,11 +88,7 @@ fun AiChefScreen() {
                     }
                 },
                 onPasteClipboard = {
-                    clipboard.readText()
-                        ?.takeIf { it.isNotBlank() }
-                        ?.let { copiedText ->
-                            draft = if (draft.isBlank()) copiedText else "$draft$copiedText"
-                        }
+                    clipboard.readText()?.takeIf { it.isNotBlank() }
                 },
                 onClearImage = { selectedImage = null },
                 selectedImageName = selectedImage?.fileName,

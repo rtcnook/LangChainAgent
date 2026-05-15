@@ -29,19 +29,23 @@ import androidx.compose.ui.input.key.isMetaPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.multiplatform.ui.AppCopy
+import kotlin.math.max
+import kotlin.math.min
 
 @Composable
 fun InputBar(
-    value: String,
-    onValueChange: (String) -> Unit,
+    value: TextFieldValue,
+    onValueChange: (TextFieldValue) -> Unit,
     onSend: () -> Unit,
     onPickImage: () -> Unit,
-    onPasteClipboard: () -> Unit,
+    onPasteClipboard: () -> String?,
     onClearImage: () -> Unit,
     selectedImageName: String?,
     enabled: Boolean,
@@ -80,8 +84,13 @@ fun InputBar(
                                 event.key == Key.V &&
                                 (event.isCtrlPressed || event.isMetaPressed)
                             ) {
-                                onPasteClipboard()
-                                true
+                                val pastedText = onPasteClipboard()
+                                if (!pastedText.isNullOrBlank()) {
+                                    onValueChange(value.insertText(pastedText))
+                                    true
+                                } else {
+                                    false
+                                }
                             } else {
                                 false
                             }
@@ -92,7 +101,7 @@ fun InputBar(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.CenterStart,
                         ) {
-                            if (value.isEmpty()) {
+                            if (value.text.isEmpty()) {
                                 Text(
                                     text = AppCopy.inputPlaceholder,
                                     color = Color(0xFF9CA3AF),
@@ -105,7 +114,7 @@ fun InputBar(
                 )
                 Button(
                     onClick = onSend,
-                    enabled = enabled && (value.isNotBlank() || selectedImageName != null),
+                    enabled = enabled && (value.text.isNotBlank() || selectedImageName != null),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(0xFFF97316),
                         disabledContainerColor = Color(0xFFD1D5DB),
@@ -142,4 +151,15 @@ fun InputBar(
             }
         }
     }
+}
+
+internal fun TextFieldValue.insertText(textToInsert: String): TextFieldValue {
+    val start = min(selection.start, selection.end).coerceIn(0, text.length)
+    val end = max(selection.start, selection.end).coerceIn(0, text.length)
+    val nextText = text.replaceRange(start, end, textToInsert)
+    val nextCursor = start + textToInsert.length
+    return copy(
+        text = nextText,
+        selection = TextRange(nextCursor),
+    )
 }
